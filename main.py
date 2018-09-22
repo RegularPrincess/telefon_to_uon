@@ -15,7 +15,7 @@ class Info:
 def send_data_to_uon(data):
     today = datetime.datetime.today()
     t = today.time()
-    date_str = '{} {}:{}:{}'.format(today.date(), t.hour - (3 + cfg.time_zone_from_msk), t.minute, t.second)
+    date_str = '{} {}:{}:{}'.format(today.date(), t.hour + cfg.time_zone_from_msk, t.minute, t.second)
     note = 'Примечания: {}'.format("\n".join(data.answers))
     payload = {
         'r_dat': date_str,
@@ -24,7 +24,7 @@ def send_data_to_uon(data):
         'source': '"Телефонистка"',
         'u_phone': data.number,
         'u_note': note
-    }#'2018-09-18T19:08:30.204146'
+    }
 
     print(payload)
     url = 'https://api.u-on.ru/{}/lead/create.json'.format(cfg.uon_key)
@@ -34,6 +34,7 @@ def send_data_to_uon(data):
 
 
 def get_new_calls(from_time):
+    # from_time = '2018-09-22T09:01:28.568068'
     url = 'https://api.telefonistka.ru/v1/calls/search?from_time={}&auth_api_key={}'\
         .format(from_time, cfg.telefonistka_key)
     response = requests.get(url, )
@@ -57,7 +58,7 @@ def get_call_details(call_id):
     resp_json = json.loads(response.text)
     call = resp_json['list'][0]
     info.answers.append(call["caller_message"])
-    info.answers.append("Дата звонка: " + call["datetime"])
+    info.answers.append("Дата звонка: " + call["datetime"] + " UTC")
     info.name = call["caller_name"]
     info.number = call["caller_phone"]
     return info
@@ -66,13 +67,17 @@ def get_call_details(call_id):
 def start():
     while True:
         today = datetime.datetime.today()
+        today -= datetime.timedelta(hours=9, minutes=24)
+        today -= datetime.timedelta(hours=(3 + cfg.time_zone_from_msk))
+        print(today)
         time_str = str(today).replace(' ', 'T')
-        time.sleep(600)
+        time.sleep(60)
+        print(today)
         new_calls = get_new_calls(time_str)
         for c in new_calls:
             call_desc = get_call_details(c)
             send_data_to_uon(call_desc)
 
-
 if __name__ == '__main__':
     start()
+# 2018-09-22T09:01:28.568068
