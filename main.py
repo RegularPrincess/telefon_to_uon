@@ -67,7 +67,7 @@ def get_call_details(call_id):
 def start():
     while True:
         today = datetime.datetime.today()
-        today -= datetime.timedelta(hours=9, minutes=24)
+        # today -= datetime.timedelta(hours=9, minutes=24)
         today -= datetime.timedelta(hours=(3 + cfg.time_zone_from_msk))
         print(today)
         time_str = str(today).replace(' ', 'T')
