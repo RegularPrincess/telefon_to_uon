@@ -3,13 +3,20 @@ import json
 import time
 import requests
 import config as cfg
+from datetime import datetime as dt
+
+
+call_ids = []
 
 
 class Info:
-    def __init__(self):
+    def __init__(self, number=None, duration=None, id=None, datetime=None):
         self.name = ''
-        self.number = ''
+        self.number = number
         self.answers = []
+        self.duration = duration
+        self.datetime = datetime
+        self.id = id
 
 
 def send_data_to_uon(data):
@@ -17,6 +24,7 @@ def send_data_to_uon(data):
     t = today.time()
     date_str = '{} {}:{}:{}'.format(today.date(), t.hour + cfg.time_zone_from_msk, t.minute, t.second)
     note = 'Примечания: {}'.format("\n".join(data.answers))
+    note += '\nЛиния: ТА Пегас Туристик на "Короленко"'
     payload = {
         'r_dat': date_str,
         'r_u_id': cfg.default_uon_admin_id,
@@ -28,6 +36,20 @@ def send_data_to_uon(data):
 
     print(payload)
     url = 'https://api.u-on.ru/{}/lead/create.json'.format(cfg.uon_key)
+    response = requests.post(url, data=payload)
+    print(response)
+    print(response.text)
+
+
+def send_call_info(data):
+    payload = {
+        'start': data.datetime,
+        'manager_id': cfg.default_uon_admin_id,
+        'phone': data.number,
+        'duration': data.duration,
+        'record_link': get_record(data.id)
+    }
+    url = 'https://api.u-on.ru/{}/call_history/create.json'.format(cfg.uon_key)
     response = requests.post(url, data=payload)
     print(response)
     print(response.text)
@@ -45,8 +67,22 @@ def get_new_calls(from_time):
         resp_json = json.loads(response.text)
         resp_list = resp_json["list"]
         for r in resp_list:
-            calls.append(r["id"])
+            if r["id"] not in call_ids:
+                call_ids.append(r["id"])
+                calls.append(r["id"])
+            if r["id"] in call_ids:
+                f = open('text.txt', 'a')
+                f.write("it's happen")
+                f.close()
     return calls
+
+
+def get_record(call_id):
+    link = "https://api.telefonistka.ru/v1/calls/{}/record.mp3?auth_api_key={}".format(call_id, cfg.telefonistka_key)
+    return link
+
+
+# send_call_info(Info(number="+7981488228", duration='00:21', id=6453508586441006660, datetime=dt.today()))
 
 
 def get_call_details(call_id):
@@ -58,21 +94,39 @@ def get_call_details(call_id):
     resp_json = json.loads(response.text)
     call = resp_json['list'][0]
     info.answers.append(call["caller_message"])
-    info.answers.append("Дата звонка: " + call["datetime"] + " UTC")
+    i = call["datetime"].index('.') - len(call["datetime"])
+    datetime_object = dt.strptime(call["datetime"][:i], "%Y-%m-%dT%H:%M:%S")
+    datetime_object += datetime.timedelta(hours=3 - cfg.time_zone_from_msk)
+    info.datetime = datetime_object
+    info.answers.append("Дата звонка: " + str(datetime_object))
     info.name = call["caller_name"]
     info.number = call["caller_phone"]
+    info.id = call_id
+
+    #get duration
+    url = 'https://api.telefonistka.ru/v1/calls/{}?auth_api_key={}'.format(call_id, cfg.telefonistka_key)
+    response = requests.get(url, )
+    print(response)
+    print(response.text)
+    resp_json = json.loads(response.text)
+    i = resp_json["answer_datetime"].index('.') - len(resp_json["answer_datetime"])
+    answer_datetime = dt.strptime(resp_json["answer_datetime"][:i], "%Y-%m-%dT%H:%M:%S")
+    finish_datetime = dt.strptime(resp_json["finish_datetime"][:i], "%Y-%m-%dT%H:%M:%S")
+    duration = finish_datetime - answer_datetime
+    info.duration = duration
+    info.answers.append("Длительность звонка: " + str(duration))
+    info.answers.append("Ссылка на запись звонка: " + get_record(call_id))
     return info
 
 
 def start():
     while True:
         today = datetime.datetime.today()
-        # today -= datetime.timedelta(hours=9, minutes=24)
-        today -= datetime.timedelta(hours=(3 + cfg.time_zone_from_msk))
+        # today -= datetime.timedelta(hours=1, minutes=35)
+        today -= datetime.timedelta(hours=(3 - cfg.time_zone_from_msk))
         print(today)
         time_str = str(today).replace(' ', 'T')
         time.sleep(60)
-        print(today)
         new_calls = get_new_calls(time_str)
         for c in new_calls:
             call_desc = get_call_details(c)
