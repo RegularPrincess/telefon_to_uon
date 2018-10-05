@@ -37,22 +37,49 @@ def send_data_to_uon(data):
     print(payload)
     url = 'https://api.u-on.ru/{}/lead/create.json'.format(cfg.uon_key)
     response = requests.post(url, data=payload)
+    resp_json = json.loads(response.text)
     print(response)
     print(response.text)
+    return resp_json['id']
 
 
-def send_call_info(data):
+def get_record_link(call_id):
+    link = "https://api.telefonistka.ru/v1/calls/{}/record.mp3?auth_api_key={}".format(call_id, cfg.telefonistka_key)
+    return link
+
+
+def send_call_info(data, internall_id):
+    # payload = {
+    #     'start': data.datetime,
+    #     'manager_id': cfg.default_uon_admin_id,
+    #     'phone': data.number,
+    #     'duration': data.duration,
+    #     'record_link': get_record_link(data.id),
+    #     'direction': 2
+    # }
+    # url = 'https://api.u-on.ru/{}/call_history/create.json'.format(cfg.uon_key)
+    # response = requests.post(url, data=payload)
+    # print(response)
+    # print(response.text)
+
     payload = {
-        'start': data.datetime,
-        'manager_id': cfg.default_uon_admin_id,
-        'phone': data.number,
-        'duration': data.duration,
-        'record_link': get_record(data.id)
+        'datetime': data.datetime,
+        'r_id': internall_id,
+        'type_id': 1,
+        'text': get_audio_btn(get_record_link(data.id)) +
+        '\n Продолжительность: {} \n Номер: {}'.format(data.duration, data.number)
     }
-    url = 'https://api.u-on.ru/{}/call_history/create.json'.format(cfg.uon_key)
+    url = 'https://api.u-on.ru/{}/request-action/create.json'.format(cfg.uon_key)
     response = requests.post(url, data=payload)
     print(response)
     print(response.text)
+
+
+def get_audio_btn(link):
+    audio_btn = '<audio src="{}" ' \
+                'controls="controls" ' \
+                'preload="none"></audio>'.format(link)
+    return audio_btn
 
 
 def get_new_calls(from_time):
@@ -75,14 +102,6 @@ def get_new_calls(from_time):
                 f.write("it's happen")
                 f.close()
     return calls
-
-
-def get_record(call_id):
-    link = "https://api.telefonistka.ru/v1/calls/{}/record.mp3?auth_api_key={}".format(call_id, cfg.telefonistka_key)
-    return link
-
-
-# send_call_info(Info(number="+7981488228", duration='00:21', id=6453508586441006660, datetime=dt.today()))
 
 
 def get_call_details(call_id):
@@ -109,15 +128,24 @@ def get_call_details(call_id):
     print(response)
     print(response.text)
     resp_json = json.loads(response.text)
-    i = resp_json["answer_datetime"].index('.') - len(resp_json["answer_datetime"])
-    answer_datetime = dt.strptime(resp_json["answer_datetime"][:i], "%Y-%m-%dT%H:%M:%S")
-    finish_datetime = dt.strptime(resp_json["finish_datetime"][:i], "%Y-%m-%dT%H:%M:%S")
-    duration = finish_datetime - answer_datetime
-    info.duration = duration
-    info.answers.append("Длительность звонка: " + str(duration))
-    info.answers.append("Ссылка на запись звонка: " + get_record(call_id))
+    if resp_json["answer_datetime"] is None:
+        info.duration = 0
+        info.answers.append("Длительность звонка: 0")
+    else:
+        i = resp_json["answer_datetime"].index('.') - len(resp_json["answer_datetime"])
+        answer_datetime = dt.strptime(resp_json["answer_datetime"][:i], "%Y-%m-%dT%H:%M:%S")
+        i = resp_json["finish_datetime"].index('.') - len(resp_json["finish_datetime"])
+        finish_datetime = dt.strptime(resp_json["finish_datetime"][:i], "%Y-%m-%dT%H:%M:%S")
+        duration = finish_datetime - answer_datetime
+        info.duration = duration.seconds
+        info.answers.append("Длительность звонка: " + str(duration))
+    # info.answers.append("Ссылка на запись звонка: " + get_record(call_id))
     return info
 
+
+call_desc = get_call_details('6453570962252796484')
+id = send_data_to_uon(call_desc)
+send_call_info(call_desc, id)
 
 def start():
     while True:
@@ -130,7 +158,8 @@ def start():
         new_calls = get_new_calls(time_str)
         for c in new_calls:
             call_desc = get_call_details(c)
-            send_data_to_uon(call_desc)
+            id = send_data_to_uon(call_desc)
+            send_call_info(call_desc, id)
 
 if __name__ == '__main__':
     start()
