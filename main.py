@@ -97,7 +97,7 @@ def get_new_calls(from_time):
             if r["id"] not in call_ids:
                 call_ids.append(r["id"])
                 calls.append(r["id"])
-            if r["id"] in call_ids:
+            else:
                 f = open('text.txt', 'a')
                 f.write("it's happen")
                 f.close()
@@ -150,7 +150,7 @@ def get_call_details(call_id):
 def start():
     while True:
         today = datetime.datetime.today()
-        # today -= datetime.timedelta(hours=0, minutes=35)
+        # today -= datetime.timedelta(hours=0, minutes=20)
         today -= datetime.timedelta(hours=(3 - cfg.time_zone_from_msk))
         print(today)
         time_str = str(today).replace(' ', 'T')
