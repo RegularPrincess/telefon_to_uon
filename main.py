@@ -142,19 +142,19 @@ def get_call_details(call_id):
     # info.answers.append("Ссылка на запись звонка: " + get_record(call_id))
     return info
 
-
-call_desc = get_call_details('6453570962252796484')
-id = send_data_to_uon(call_desc)
-send_call_info(call_desc, id)
+#
+# call_desc = get_call_details('6453570962252796484')
+# id = send_data_to_uon(call_desc)
+# send_call_info(call_desc, id)
 
 def start():
     while True:
         today = datetime.datetime.today()
-        # today -= datetime.timedelta(hours=1, minutes=35)
+        # today -= datetime.timedelta(hours=0, minutes=35)
         today -= datetime.timedelta(hours=(3 - cfg.time_zone_from_msk))
         print(today)
         time_str = str(today).replace(' ', 'T')
-        time.sleep(60)
+        time.sleep(300)
         new_calls = get_new_calls(time_str)
         for c in new_calls:
             call_desc = get_call_details(c)
