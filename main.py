@@ -19,12 +19,12 @@ class Info:
         self.id = id
 
 
-def send_data_to_uon(data):
+def send_data_to_uon(data, line_name_telefon):
     today = datetime.datetime.today()
     t = today.time()
     date_str = '{} {}:{}:{}'.format(today.date(), t.hour + cfg.time_zone_from_msk, t.minute, t.second)
     note = 'Примечания: {}'.format("\n".join(data.answers))
-    note += '\nЛиния: ТА Пегас Туристик на "Короленко"'
+    note += '\n' + line_name_telefon
     payload = {
         'r_dat': date_str,
         'r_u_id': cfg.default_uon_admin_id,
@@ -82,10 +82,10 @@ def get_audio_btn(link):
     return audio_btn
 
 
-def get_new_calls(from_time):
+def get_new_calls(from_time, api_key):
     # from_time = '2018-09-22T09:01:28.568068'
     url = 'https://api.telefonistka.ru/v1/calls/search?from_time={}&auth_api_key={}'\
-        .format(from_time, cfg.telefonistka_key)
+        .format(from_time, api_key)
     response = requests.get(url, )
     print(response)
     print(response.text)
@@ -115,7 +115,7 @@ def get_call_details(call_id):
     info.answers.append(call["caller_message"])
     i = call["datetime"].index('.') - len(call["datetime"])
     datetime_object = dt.strptime(call["datetime"][:i], "%Y-%m-%dT%H:%M:%S")
-    datetime_object += datetime.timedelta(hours=3 - cfg.time_zone_from_msk)
+    datetime_object += datetime.timedelta(hours=3)
     info.datetime = datetime_object
     info.answers.append("Дата звонка: " + str(datetime_object))
     info.name = call["caller_name"]
@@ -155,10 +155,16 @@ def start():
         print(today)
         time_str = str(today).replace(' ', 'T')
         time.sleep(300)
-        new_calls = get_new_calls(time_str)
+        new_calls = get_new_calls(time_str, cfg.telefonistka_key)
         for c in new_calls:
             call_desc = get_call_details(c)
-            id = send_data_to_uon(call_desc)
+            id = send_data_to_uon(call_desc, 'ТА Пегас Туристик на "Короленко"')
+            send_call_info(call_desc, id)
+
+        new_calls = get_new_calls(time_str, cfg.telefonistka_key2)
+        for c in new_calls:
+            call_desc = get_call_details(c)
+            id = send_data_to_uon(call_desc, 'Туристическая школа')
             send_call_info(call_desc, id)
 
 if __name__ == '__main__':
