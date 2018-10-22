@@ -5,7 +5,6 @@ import requests
 import config as cfg
 from datetime import datetime as dt
 
-
 call_ids = []
 
 
@@ -40,6 +39,11 @@ def send_data_to_uon(data, line_name_telefon):
     resp_json = json.loads(response.text)
     print(response)
     print(response.text)
+    f = open('text.log', 'a')
+    f.write(str(dt.today()) + '   ')
+    f.write(data.number + '   ')
+    f.write(response.text + '\n')
+    f.close()
     return resp_json['id']
 
 
@@ -67,7 +71,7 @@ def send_call_info(data, internall_id):
         'r_id': internall_id,
         'type_id': 1,
         'text': get_audio_btn(get_record_link(data.id)) +
-        '\n Продолжительность: {} \n Номер: {}'.format(data.duration, data.number)
+                '\n Продолжительность: {} \n Номер: {}'.format(data.duration, data.number)
     }
     url = 'https://api.u-on.ru/{}/request-action/create.json'.format(cfg.uon_key)
     response = requests.post(url, data=payload)
@@ -84,7 +88,7 @@ def get_audio_btn(link):
 
 def get_new_calls(from_time, api_key):
     # from_time = '2018-09-22T09:01:28.568068'
-    url = 'https://api.telefonistka.ru/v1/calls/search?from_time={}&auth_api_key={}'\
+    url = 'https://api.telefonistka.ru/v1/calls/search?from_time={}&auth_api_key={}' \
         .format(from_time, api_key)
     response = requests.get(url, )
     print(response)
@@ -106,7 +110,7 @@ def get_new_calls(from_time, api_key):
 
 def get_call_details(call_id):
     url = 'https://api.telefonistka.ru/v1/calls/{}/messages?auth_api_key={}'.format(call_id, cfg.telefonistka_key)
-    response = requests.get(url,)
+    response = requests.get(url, )
     print(response)
     print(response.text)
     info = Info()
@@ -122,7 +126,7 @@ def get_call_details(call_id):
     info.number = call["caller_phone"]
     info.id = call_id
 
-    #get duration
+    # get duration
     url = 'https://api.telefonistka.ru/v1/calls/{}?auth_api_key={}'.format(call_id, cfg.telefonistka_key)
     response = requests.get(url, )
     print(response)
@@ -142,6 +146,7 @@ def get_call_details(call_id):
     # info.answers.append("Ссылка на запись звонка: " + get_record(call_id))
     return info
 
+
 #
 # call_desc = get_call_details('6453570962252796484')
 # id = send_data_to_uon(call_desc)
@@ -149,24 +154,31 @@ def get_call_details(call_id):
 
 def start():
     while True:
-        today = datetime.datetime.today()
-        # today -= datetime.timedelta(hours=0, minutes=20)
-        today -= datetime.timedelta(hours=(3 - cfg.time_zone_from_msk))
-        print(today)
-        time_str = str(today).replace(' ', 'T')
-        time.sleep(300)
-        new_calls = get_new_calls(time_str, cfg.telefonistka_key)
-        for c in new_calls:
-            call_desc = get_call_details(c)
-            id = send_data_to_uon(call_desc, 'ТА Пегас Туристик на "Короленко"')
-            send_call_info(call_desc, id)
+        try:
+            today = datetime.datetime.today()
+            # today -= datetime.timedelta(hours=0, minutes=20)
+            today -= datetime.timedelta(hours=(3 - cfg.time_zone_from_msk))
+            print(today)
+            time_str = str(today).replace(' ', 'T')
+            time.sleep(300)
+            new_calls = get_new_calls(time_str, cfg.telefonistka_key)
+            for c in new_calls:
+                call_desc = get_call_details(c)
+                id = send_data_to_uon(call_desc, 'ТА Пегас Туристик на "Короленко"')
+                send_call_info(call_desc, id)
 
-        new_calls = get_new_calls(time_str, cfg.telefonistka_key2)
-        for c in new_calls:
-            call_desc = get_call_details(c)
-            id = send_data_to_uon(call_desc, 'Туристическая школа')
-            send_call_info(call_desc, id)
+            new_calls = get_new_calls(time_str, cfg.telefonistka_key2)
+            for c in new_calls:
+                call_desc = get_call_details(c)
+                id = send_data_to_uon(call_desc, 'Туристическая школа')
+                send_call_info(call_desc, id)
+        except BaseException as e:
+            f = open('text.log', 'a')
+            f.write(str(dt.today()) + '   ')
+            f.write(str(e) + '   ')
+            f.close()
+
 
 if __name__ == '__main__':
     start()
-# 2018-09-22T09:01:28.568068
+    # 2018-09-22T09:01:28.568068
