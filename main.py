@@ -1,6 +1,8 @@
 import datetime
 import json
 import time
+import traceback
+
 import requests
 import config as cfg
 from datetime import datetime as dt
@@ -34,7 +36,7 @@ def send_data_to_uon(data, line_name_telefon):
     }
 
     print(payload)
-    url = 'https://api.u-on.ru/{}/lead/create.json'.format(cfg.uon_key)
+    url = 'хуйhttps://api.u-on.ru/{}/lead/create.json'.format(cfg.uon_key)
     response = requests.post(url, data=payload)
     resp_json = json.loads(response.text)
     print(response)
@@ -73,7 +75,7 @@ def send_call_info(data, internall_id):
         'text': get_audio_btn(get_record_link(data.id)) +
                 '\n Продолжительность: {} \n Номер: {}'.format(data.duration, data.number)
     }
-    url = 'https://api.u-on.ru/{}/request-action/create.json'.format(cfg.uon_key)
+    url = 'хуйhttps://api.u-on.ru/{}/request-action/create.json'.format(cfg.uon_key)
     response = requests.post(url, data=payload)
     print(response)
     print(response.text)
@@ -156,26 +158,31 @@ def start():
     while True:
         try:
             today = datetime.datetime.today()
-            # today -= datetime.timedelta(hours=0, minutes=20)
+            today -= datetime.timedelta(hours=40, minutes=20)
             today -= datetime.timedelta(hours=(3 - cfg.time_zone_from_msk))
-            print(today)
+            # print(today)
             time_str = str(today).replace(' ', 'T')
             time.sleep(300)
             new_calls = get_new_calls(time_str, cfg.telefonistka_key)
+            print("Количество ")
+            print(len(new_calls))
             for c in new_calls:
                 call_desc = get_call_details(c)
                 id = send_data_to_uon(call_desc, 'ТА Пегас Туристик на "Короленко"')
                 send_call_info(call_desc, id)
 
             new_calls = get_new_calls(time_str, cfg.telefonistka_key2)
+            print(len(new_calls))
             for c in new_calls:
                 call_desc = get_call_details(c)
                 id = send_data_to_uon(call_desc, 'Туристическая школа')
                 send_call_info(call_desc, id)
         except BaseException as e:
+            var = traceback.format_exc()
             f = open('text.log', 'a')
-            f.write(str(dt.today()) + '   ')
-            f.write(str(e) + '   ')
+            f.write(str(dt.today()) + '   \n')
+            f.write(var + '\n')
+            f.write(str(e) + '   \n')
             f.close()
 
 
