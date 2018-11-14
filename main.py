@@ -36,7 +36,7 @@ def send_data_to_uon(data, line_name_telefon):
     }
 
     print(payload)
-    url = 'хуйhttps://api.u-on.ru/{}/lead/create.json'.format(cfg.uon_key)
+    url = 'https://api.u-on.ru/{}/lead/create.json'.format(cfg.uon_key)
     response = requests.post(url, data=payload)
     resp_json = json.loads(response.text)
     print(response)
@@ -75,7 +75,7 @@ def send_call_info(data, internall_id):
         'text': get_audio_btn(get_record_link(data.id)) +
                 '\n Продолжительность: {} \n Номер: {}'.format(data.duration, data.number)
     }
-    url = 'хуйhttps://api.u-on.ru/{}/request-action/create.json'.format(cfg.uon_key)
+    url = 'https://api.u-on.ru/{}/request-action/create.json'.format(cfg.uon_key)
     response = requests.post(url, data=payload)
     print(response)
     print(response.text)
@@ -158,11 +158,11 @@ def get_call_details(call_id):
 def start():
     while True:
         today = datetime.datetime.today()
-        # today -= datetime.timedelta(hours=4, minutes=20)
+        today -= datetime.timedelta(hours=4, minutes=20)
         today -= datetime.timedelta(hours=(3 - cfg.time_zone_from_msk))
         # print(today)
         time_str = str(today).replace(' ', 'T')
-        time.sleep(300)
+        time.sleep(3)
         new_calls = get_new_calls(time_str, cfg.telefonistka_key)
         print("Количество ")
         print(len(new_calls))
