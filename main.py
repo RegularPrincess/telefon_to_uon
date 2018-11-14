@@ -111,13 +111,21 @@ def get_new_calls(from_time, api_key):
 
 
 def get_call_details(call_id):
-    url = 'https://api.telefonistka.ru/v1/calls/{}/messages?auth_api_key={}'.format(call_id, cfg.telefonistka_key)
-    response = requests.get(url, )
-    print(call_id)
-    print(response)
-    print(response.text)
+    l = 0
+    resp_json = None
     info = Info()
-    resp_json = json.loads(response.text)
+    try_count = 0
+    while l < 1 and try_count < 3:
+        url = 'https://api.telefonistka.ru/v1/calls/{}/messages?auth_api_key={}'.format(call_id, cfg.telefonistka_key)
+        response = requests.get(url, )
+        print(call_id)
+        print(response)
+        print(response.text)
+        resp_json = json.loads(response.text)
+        l = len(resp_json['list'])
+        if try_count > 0:
+            time.sleep(2)
+        try_count += 1
     call = resp_json['list'][0]
     info.answers.append(call["caller_message"])
     i = call["datetime"].index('.') - len(call["datetime"])
@@ -158,11 +166,11 @@ def get_call_details(call_id):
 def start():
     while True:
         today = datetime.datetime.today()
-        today -= datetime.timedelta(hours=4, minutes=20)
+        # today -= datetime.timedelta(hours=4, minutes=20)
         today -= datetime.timedelta(hours=(3 - cfg.time_zone_from_msk))
         # print(today)
         time_str = str(today).replace(' ', 'T')
-        time.sleep(3)
+        time.sleep(300)
         new_calls = get_new_calls(time_str, cfg.telefonistka_key)
         print("Количество ")
         print(len(new_calls))
@@ -175,7 +183,7 @@ def start():
                 var = traceback.format_exc()
                 print(var)
                 f = open('text.log', 'a')
-                f.write(str(dt.today()) + " id=" + c + '\n' )
+                f.write(str(dt.today()) + " id=" + c + '\n')
                 f.write(var + '\n')
                 f.write(str(e) + '   \n')
                 f.close()
@@ -183,9 +191,18 @@ def start():
         new_calls = get_new_calls(time_str, cfg.telefonistka_key2)
         print(len(new_calls))
         for c in new_calls:
-            call_desc = get_call_details(c)
-            id = send_data_to_uon(call_desc, 'Туристическая школа')
-            send_call_info(call_desc, id)
+            try:
+                call_desc = get_call_details(c)
+                id = send_data_to_uon(call_desc, 'Туристическая школа')
+                send_call_info(call_desc, id)
+            except BaseException as e:
+                var = traceback.format_exc()
+                print(var)
+                f = open('text.log', 'a')
+                f.write(str(dt.today()) + " id=" + c + '\n')
+                f.write(var + '\n')
+                f.write(str(e) + '   \n')
+                f.close()
 
 
 # get_call_details('6465486176522840644')
